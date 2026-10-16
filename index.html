@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAVP-Pilot — Haute École Charlemagne</title>
+  <style>
+    :root {
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --bg: #0b1329;
+      --card-bg: rgba(15, 23, 42, 0.92);
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+      --warning: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body {
+      background: radial-gradient(circle at 50% 20%, #1e293b 0%, var(--bg) 80%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 40px 32px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(2, 132, 199, 0.2);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(2, 132, 199, 0.15);
+      border: 1px solid var(--primary);
+      color: #38bdf8;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    h1 { font-size: 1.85rem; font-weight: 800; color: #fff; margin-bottom: 8px; }
+    .subtitle { font-size: 0.92rem; color: var(--text-muted); margin-bottom: 28px; line-height: 1.4; }
+    .status-box {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 20px;
+      margin-bottom: 24px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.15);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status-title { font-size: 1.05rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .status-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; }
+    .btn {
+      display: inline-block;
+      width: 100%;
+      padding: 14px 20px;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      text-decoration: none;
+      border-radius: 12px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(2, 132, 199, 0.5); }
+    .footer { margin-top: 24px; font-size: 0.8rem; color: #64748b; }
+    .footer strong { color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">🏛️ Haute École Charlemagne</div>
+    <h1>CAVP-Pilot 2026-2027</h1>
+    <div class="subtitle">Système de Coordination & d'Arbitrage des PAE<br>Département Pédagogique</div>
+
+    <div class="status-box" id="status-box">
+      <div class="spinner" id="spinner"></div>
+      <div class="status-title" id="status-title">Connexion à l'Assistant CAVP...</div>
+      <div class="status-desc" id="status-desc">Recherche de la passerelle active sur le poste de coordination...</div>
+    </div>
+
+    <div id="action-container" style="display: none;">
+      <a id="direct-btn" href="#" class="btn">🚀 Entrer dans l'Assistant CAVP</a>
+    </div>
+
+    <div class="footer">
+      Lien permanent officiel : <strong>https://tinyurl.com/cavp-pilot</strong>
+    </div>
+  </div>
+
+  <script>
+    const GITHUB_REPO = 'jeromefoguenne-eng/cavp-portal';
+    const statusTitle = document.getElementById('status-title');
+    const statusDesc = document.getElementById('status-desc');
+    const spinner = document.getElementById('spinner');
+    const actionContainer = document.getElementById('action-container');
+    const directBtn = document.getElementById('direct-btn');
+
+    async function fetchTunnelConfig() {
+      const timestamp = Date.now();
+      try {
+        const rawUrl = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/active_tunnel.json?t=${timestamp}`;
+        const resp = await fetch(rawUrl, { cache: 'no-store' });
+        if (resp.ok) {
+          const cfg = await resp.json();
+          if (cfg && cfg.url) return cfg;
+        }
+      } catch (e) {}
+
+      try {
+        const apiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/active_tunnel.json?t=${timestamp}`;
+        const resp = await fetch(apiUrl, { cache: 'no-store', headers: { 'Accept': 'application/vnd.github.v3+json' } });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data && data.content) {
+            const cfg = JSON.parse(atob(data.content));
+            if (cfg && cfg.url) return cfg;
+          }
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    async function checkTunnel() {
+      try {
+        const cfg = await fetchTunnelConfig();
+        if (cfg && cfg.status === 'online' && cfg.url) {
+          statusTitle.textContent = 'Serveur en ligne ! Redirection...';
+          statusDesc.textContent = 'Ouverture de votre espace CAVP en cours...';
+          directBtn.href = cfg.url;
+          actionContainer.style.display = 'block';
+          setTimeout(() => { window.location.replace(cfg.url); }, 350);
+        } else {
+          spinner.style.display = 'none';
+          statusTitle.textContent = 'Serveur en attente';
+          statusDesc.textContent = 'Le service en ligne est actuellement en cours de démarrage ou en veille.';
+        }
+      } catch (err) {
+        spinner.style.display = 'none';
+        statusTitle.textContent = 'Connexion indisponible';
+        statusDesc.textContent = 'Veuillez vérifier votre connexion Internet et réessayer.';
+      }
+    }
+    checkTunnel();
+  </script>
+</body>
+</html>
